@@ -3,7 +3,7 @@
  * Plugin Name:       FasterMessage
  * Plugin URI:        https://www.fastermessage.com/docs
  * Description:       Send SMS and WhatsApp messages from WordPress with the FasterMessage API v2: from the admin screen or from your own code.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Urban Technology
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('FASTERMESSAGE_VERSION', '0.1.0');
+define('FASTERMESSAGE_VERSION', '0.2.0');
 define('FASTERMESSAGE_FILE', __FILE__);
 define('FASTERMESSAGE_DIR', plugin_dir_path(__FILE__));
 

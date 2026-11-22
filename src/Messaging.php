@@ -68,7 +68,8 @@ final class Messaging
     /**
      * Envoie un SMS.
      *
-     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string} $args
+     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
+     *        `fallback` : étapes de repli (`channel`, `to`, `from`, `content`) si le message échoue
      *
      * @return array<string, mixed>|\WP_Error la ressource message (`id`, `status`…)
      */
@@ -87,8 +88,11 @@ final class Messaging
      * message du destinataire) ou un modèle approuvé
      * (`['template' => 'nom', 'language' => 'fr', 'variables' => ['1' => '…']]`).
      *
+     * Avec `$args['fallback'] = [['channel' => 'sms', 'to' => …, 'content' => 'texte']]`,
+     * l'API envoie le SMS si le message WhatsApp échoue.
+     *
      * @param string|array<string, mixed> $content
-     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string} $args
+     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *
      * @return array<string, mixed>|\WP_Error
      */
@@ -107,7 +111,9 @@ final class Messaging
      * `from` : une adresse VALIDÉE du compte ; absente (ni argument ni réglage),
      * l'API prend la première adresse active du compte.
      *
-     * @param array{from?: string, text?: string, client_reference?: string, callback_url?: string, idempotency_key?: string} $args
+     * Ni pièce jointe, ni copie (Cc/Bcc), ni nom d'expéditeur : l'API ne les prend pas.
+     *
+     * @param array{from?: string, text?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *
      * @return array<string, mixed>|\WP_Error
      */
@@ -230,6 +236,12 @@ final class Messaging
             if (isset($args[$optional]) && $args[$optional] !== '') {
                 $params[$optional] = (string) $args[$optional];
             }
+        }
+        // REPLI : étapes ordonnées exécutées par l'API si le message échoue
+        // (`['channel' => 'sms', 'to' => …, 'from' => …, 'content' => …]`). Transmis
+        // tel quel : c'est l'API qui valide chaque étape et dit laquelle est refusée.
+        if (isset($args['fallback']) && is_array($args['fallback']) && $args['fallback'] !== []) {
+            $params['fallback'] = array_values($args['fallback']);
         }
 
         return $params;

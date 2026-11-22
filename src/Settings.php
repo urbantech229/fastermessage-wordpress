@@ -10,7 +10,7 @@ namespace FasterMessageWP;
  * Chaque réglage peut aussi être imposé par une CONSTANTE dans `wp-config.php`
  * (`FASTERMESSAGE_API_USER`, `FASTERMESSAGE_API_PASSWORD`, `FASTERMESSAGE_API_KEY`,
  * `FASTERMESSAGE_BASE_URL`, `FASTERMESSAGE_SMS_SENDER`, `FASTERMESSAGE_WHATSAPP_NUMBER`,
- * `FASTERMESSAGE_EMAIL_SENDER`).
+ * `FASTERMESSAGE_EMAIL_SENDER`, `FASTERMESSAGE_ROUTE_WP_MAIL`).
  * La constante l'emporte, et le champ correspondant devient non modifiable dans
  * l'écran : c'est la façon de garder les secrets hors de la base, et de figer
  * la configuration d'un site géré par une agence.
@@ -35,7 +35,10 @@ final class Settings
         'sms_sender' => 'FASTERMESSAGE_SMS_SENDER',
         'whatsapp_number' => 'FASTERMESSAGE_WHATSAPP_NUMBER',
         'email_sender' => 'FASTERMESSAGE_EMAIL_SENDER',
+        // Case à cocher : `'1'` activé, `''` coupé (constante : `true` / `false`).
+        'route_wp_mail' => 'FASTERMESSAGE_ROUTE_WP_MAIL',
     ];
+
 
     /** Réglages jamais renvoyés au navigateur. */
     public const SECRETS = ['password', 'api_key'];
@@ -56,6 +59,12 @@ final class Settings
         }
 
         return $value;
+    }
+
+    /** Réglage oui/non activé — `'1'`, `true`, `yes` ou `on`, en option comme en constante. */
+    public static function isEnabled(string $key): bool
+    {
+        return in_array(strtolower(self::get($key)), ['1', 'true', 'yes', 'on'], true);
     }
 
     /** Vrai si le réglage est imposé par `wp-config.php`. */
@@ -106,6 +115,9 @@ final class Settings
             }
 
             $clean[$key] = match ($key) {
+                // Une case décochée arrive comme `0` (champ caché qui la précède) :
+                // seul un « oui » explicite active le réglage.
+                'route_wp_mail' => in_array(strtolower($raw), ['1', 'true', 'yes', 'on'], true) ? '1' : '',
                 'base_url' => self::cleanBaseUrl($raw, $old),
                 'email_sender' => sanitize_email($raw),
                 // Une clé ou un mot de passe collé garde ses caractères : seuls les

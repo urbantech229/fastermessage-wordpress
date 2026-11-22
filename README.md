@@ -12,7 +12,9 @@ WordPress 6.5 ou plus récent, PHP 8.1 ou plus récent. Aucune dépendance à in
 | Envoyer un SMS, un message WhatsApp (modèle approuvé ou texte libre dans les 24 h) ou un e-mail (rédigé ou modèle publié) | Menu FasterMessage › Envoyer un message |
 | Choisir parmi ce que votre compte peut utiliser : numéros et modèles WhatsApp, adresses et modèles e-mail | Même écran, en listes |
 | Suivre les derniers messages des trois canaux et leur statut | Même écran, sous le formulaire |
-| Envoyer depuis un thème ou une extension | `fastermessage_send_sms()`, `fastermessage_send_whatsapp()`, `fastermessage_send_email()` |
+| Envoyer depuis un thème ou une extension, avec repli sur un autre canal | `fastermessage_send_sms()`, `fastermessage_send_whatsapp()`, `fastermessage_send_email()` |
+| Faire partir les e-mails du site (`wp_mail()`) par FasterMessage — facultatif, coupé par défaut | Réglages › FasterMessage, section « E-mails du site » |
+| Notifications de commande WooCommerce par SMS et WhatsApp | extension [FasterMessage for WooCommerce](https://github.com/urbantech229/fastermessage-woocommerce) |
 
 Une clé `fm_test_` simule chaque message : rien n'est envoyé ni débité.
 
@@ -34,6 +36,7 @@ define('FASTERMESSAGE_BASE_URL', 'https://api.votre-marque.com'); // si votre fo
 define('FASTERMESSAGE_SMS_SENDER', 'MABOUTIQUE');
 define('FASTERMESSAGE_WHATSAPP_NUMBER', '+2290161000000');
 define('FASTERMESSAGE_EMAIL_SENDER', 'commandes@maboutique.com');
+define('FASTERMESSAGE_ROUTE_WP_MAIL', true); // e-mails du site par FasterMessage
 ```
 
 ## Envoyer par code
@@ -74,7 +77,34 @@ fastermessage_send_email('awa@exemple.com', 'Votre commande 1187', '<p>Bonjour A
 ]);
 ```
 
-L'extension ne remplace pas `wp_mail()` : les autres e-mails du site partent comme avant.
+### Repli sur un autre canal
+
+`fallback` : étapes ordonnées que l'API exécute si le message échoue. Pour un WhatsApp, une étape SMS porte le texte du SMS :
+
+```php
+fastermessage_send_whatsapp('+2290160000000', ['template' => 'commande_prete', 'language' => 'fr'], [
+    'fallback' => [
+        ['channel' => 'sms', 'to' => '+2290160000000', 'from' => 'MABOUTIQUE', 'content' => 'Votre commande 1187 est prête.'],
+    ],
+]);
+```
+
+## E-mails du site par FasterMessage
+
+Réglages › FasterMessage › « Envoyer les e-mails du site par FasterMessage » (coupé par défaut, ou constante `FASTERMESSAGE_ROUTE_WP_MAIL`). Les e-mails envoyés par `wp_mail()` — réinitialisation de mot de passe, avis de nouveau compte, e-mails WooCommerce, formulaires… — partent alors par FasterMessage, depuis l'adresse expéditrice par défaut.
+
+Branché sur le filtre `pre_wp_mail` (WordPress 5.7+). **Le repli est la règle** : tout ce que FasterMessage n'a pas accepté part par l'envoi normal du site, une réinitialisation de mot de passe n'est jamais bloquée.
+
+| Cas | Ce qui se passe |
+|---|---|
+| Pièces jointes, en-têtes `Cc` / `Bcc` / `Reply-To`, corps `multipart/*`, destinataire illisible | Envoi normal, sans appel à l'API |
+| Refus de l'API, panne réseau | Envoi normal |
+| `Content-Type: text/html` (en-tête ou filtre `wp_mail_content_type`) | Corps envoyé tel quel en HTML |
+| Texte brut | Version texte telle quelle + version HTML échappée (`wpautop(esc_html())`) |
+| Plusieurs destinataires | Un envoi par destinataire. Échec du **premier** : envoi normal de tout le lot. Échec **après** un succès : pas de renvoi (doublons), échec signalé par `wp_mail_failed` |
+| En-tête `From`, nom d'expéditeur | Ignorés : l'API n'envoie que depuis une adresse validée du compte |
+
+Les actions natives `wp_mail_succeeded` (destinataires servis) et `wp_mail_failed` (destinataires en échec après un envoi partiel) sont déclenchées : les journaux d'e-mails du site restent complets. Le filtre `fastermessage_route_wp_mail` (`false`) garde un e-mail donné sur l'envoi normal.
 
 Une coupure réseau rend `fastermessage_connection` : le message a pu partir. Pour réessayer sans risque de doublon, passez la même `idempotency_key`, rendue dans `$error->get_error_data()['idempotency_key']`.
 
@@ -87,6 +117,7 @@ Pour le reste de l'API (e-mail, OTP, contacts), `fastermessage_client()` rend le
 | `fastermessage_message_sent` | action | Un message a été accepté par l'API : `($message, $channel, $params)`. |
 | `fastermessage_send_failed` | action | Un envoi a été refusé : `($error, $channel, $params)`. |
 | `fastermessage_send_params` | filtre | Modifier les paramètres juste avant l'appel : `($params, $channel)`. |
+| `fastermessage_route_wp_mail` | filtre | Rendre `false` pour laisser un e-mail sur l'envoi normal : `($route, $atts)`. |
 | `fastermessage_send_capability` | filtre | Droit requis pour l'écran d'envoi (défaut `manage_options`). |
 | `fastermessage_timeout` / `fastermessage_max_retries` | filtres | Délai HTTP (15 s) et reprises (1). |
 

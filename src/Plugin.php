@@ -17,6 +17,10 @@ final class Plugin
         // Un client construit avec les anciens réglages ne doit pas survivre à leur changement.
         add_action('update_option_' . Settings::OPTION, [Messaging::class, 'reset']);
 
+        // Toujours branché, y compris hors administration (réinitialisation de mot de
+        // passe, commandes…) : c'est le filtre qui lit le réglage, coupé par défaut.
+        MailRouter::register();
+
         if (is_admin()) {
             (new SettingsPage())->register();
             (new SendPage())->register();

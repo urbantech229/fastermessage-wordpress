@@ -68,6 +68,13 @@ final class SettingsPage
         $this->field('sms_sender', __('SMS sender', 'fastermessage'), 'fastermessage_defaults', 'text', __('A sender ID validated on your account, e.g. MYSHOP.', 'fastermessage'));
         $this->field('whatsapp_number', __('WhatsApp number', 'fastermessage'), 'fastermessage_defaults', 'text', __('The WhatsApp number connected to your account, in international format, e.g. +2290161000000.', 'fastermessage'));
         $this->field('email_sender', __('Email sender', 'fastermessage'), 'fastermessage_defaults', 'email', __('A validated sender address of your account. Leave empty to use the first active address of your account.', 'fastermessage'));
+
+        add_settings_section('fastermessage_wp_mail', __('Site emails', 'fastermessage'), function (): void {
+            echo '<p>' . esc_html__('When enabled, the emails your site sends through wp_mail() (password resets, new account notifications, WooCommerce emails, contact forms…) go out through FasterMessage, from the default email sender above.', 'fastermessage') . '</p>';
+            echo '<p>' . esc_html__('These emails always keep going out through the normal sending of your site: emails with attachments, emails with Cc or Bcc recipients or a Reply-To address, and any email FasterMessage refuses (API unreachable, sender not validated, insufficient balance…). Nothing is lost: a password reset is never blocked.', 'fastermessage') . '</p>';
+            echo '<p>' . esc_html__('The sender name and From address set by WordPress or other plugins are not used: FasterMessage only sends from a validated address of your account. Messages are charged like any FasterMessage email.', 'fastermessage') . '</p>';
+        }, self::SLUG);
+        $this->field('route_wp_mail', __('Send the site emails through FasterMessage', 'fastermessage'), 'fastermessage_wp_mail', 'checkbox', __('Use FasterMessage for the emails sent by WordPress and plugins', 'fastermessage'));
     }
 
     private function field(string $key, string $label, string $section, string $type = 'text', string $help = ''): void
@@ -78,6 +85,25 @@ final class SettingsPage
             $locked = Settings::isLocked($key);
             $secret = in_array($key, Settings::SECRETS, true);
             $hasValue = Settings::get($key) !== '';
+
+            if ($type === 'checkbox') {
+                // Le champ caché envoie « 0 » quand la case est décochée : sans lui, une
+                // case décochée serait absente du formulaire et garderait sa valeur.
+                printf(
+                    '<input type="hidden" name="%1$s" value="0"><label for="%2$s"><input type="checkbox" id="%2$s" name="%1$s" value="1" %3$s %4$s> %5$s</label>',
+                    esc_attr($name),
+                    esc_attr($id),
+                    checked(Settings::isEnabled($key), true, false),
+                    disabled($locked, true, false),
+                    esc_html($help),
+                );
+                if ($locked) {
+                    /* translators: %s: PHP constant name. */
+                    echo '<p class="description">' . sprintf(esc_html__('Set by the %s constant in wp-config.php.', 'fastermessage'), '<code>' . esc_html(Settings::CONSTANTS[$key]) . '</code>') . '</p>';
+                }
+
+                return;
+            }
 
             // ⚠️ Un secret n'est JAMAIS renvoyé au navigateur, pas même masqué :
             // le champ reste vide, et le laisser vide conserve la valeur enregistrée.

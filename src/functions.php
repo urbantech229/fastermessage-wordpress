@@ -28,8 +28,9 @@ if (!function_exists('fastermessage_send_sms')) {
      *
      * @param string $to      numéro au format international (`+229…`)
      * @param string $content texte du message
-     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string} $args
+     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *        `from` : expéditeur validé (défaut : celui des réglages)
+     *        `fallback` : étapes de repli si le SMS échoue, ex. `[['channel' => 'email', 'to' => 'awa@exemple.com']]`
      *
      * @return array<string, mixed>|WP_Error
      */
@@ -52,8 +53,10 @@ if (!function_exists('fastermessage_send_whatsapp')) {
      *
      * @param string                      $to
      * @param string|array<string, mixed> $content texte libre, ou modèle
-     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string} $args
+     * @param array{from?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *        `from` : numéro WhatsApp raccordé au compte (défaut : celui des réglages)
+     *        `fallback` : étapes de repli, ex. un SMS si le WhatsApp échoue :
+     *        `[['channel' => 'sms', 'to' => '+2290160000000', 'from' => 'MYSHOP', 'content' => 'Votre commande 1187 est prête.']]`
      *
      * @return array<string, mixed>|WP_Error
      */
@@ -72,7 +75,7 @@ if (!function_exists('fastermessage_send_email')) {
      *         'from' => 'commandes@maboutique.com', // adresse validée ; défaut : réglages, puis compte
      *     ]);
      *
-     * @param array{from?: string, text?: string, client_reference?: string, callback_url?: string, idempotency_key?: string} $args
+     * @param array{from?: string, text?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *
      * @return array<string, mixed>|WP_Error
      */

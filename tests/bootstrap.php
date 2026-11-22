@@ -184,6 +184,25 @@ function wp_parse_url(string $url, int $component = -1)
     return parse_url($url, $component);
 }
 
+/** @return string|false */
+function is_email(string $email)
+{
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : false;
+}
+
+function esc_html(string $text): string
+{
+    return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+}
+
+/** Version réduite : paragraphes sur les lignes vides, `<br />` sur les retours simples. */
+function wpautop(string $text): string
+{
+    $paragraphs = preg_split('/\n\s*\n/', trim(str_replace("\r\n", "\n", $text))) ?: [];
+
+    return implode("\n", array_map(static fn (string $p) => '<p>' . nl2br(trim($p), true) . '</p>', array_filter($paragraphs, 'strlen'))) . "\n";
+}
+
 function is_wp_error($thing): bool
 {
     return $thing instanceof WP_Error;

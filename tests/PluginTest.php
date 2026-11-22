@@ -123,7 +123,7 @@ final class PluginTest extends TestCase
         self::assertSame('Basic ' . base64_encode('boutique:s3cret'), $request['args']['headers']['Authorization']);
         self::assertSame('fm_live_abc123', $request['args']['headers']['X-Api-Key']);
         self::assertStringStartsWith('sdk-', $request['args']['headers']['Idempotency-Key']);
-        self::assertSame('fastermessage-wordpress/0.1.0', $request['args']['user-agent']);
+        self::assertSame('fastermessage-wordpress/0.2.0', $request['args']['user-agent']);
         self::assertArrayNotHasKey('User-Agent', $request['args']['headers']);
         self::assertTrue($request['args']['sslverify']);
         self::assertSame(0, $request['args']['redirection']);
@@ -181,6 +181,36 @@ final class PluginTest extends TestCase
         fastermessage_send_sms('+2290160000000', 'Bonjour');
 
         self::assertSame('AUTRE', $this->lastBody()['from']);
+    }
+
+    public function testLeRepliEstTransmisTelQuelSurLesTroisCanaux(): void
+    {
+        $this->configure(['email_sender' => 'commandes@maboutique.com']);
+        $this->respond(201, ['id' => 'msg_3', 'status' => 'queued']);
+        $fallback = [['channel' => 'sms', 'to' => '+2290160000000', 'from' => 'MYSHOP', 'content' => 'Votre commande 1187 est prête.']];
+
+        fastermessage_send_whatsapp('+2290160000000', ['template' => 'commande_prete', 'language' => 'fr'], ['fallback' => $fallback]);
+        self::assertSame($fallback, $this->lastBody()['fallback']);
+
+        fastermessage_send_sms('+2290160000000', 'Bonjour', ['fallback' => [['channel' => 'email', 'to' => 'awa@exemple.com']]]);
+        self::assertSame([['channel' => 'email', 'to' => 'awa@exemple.com']], $this->lastBody()['fallback']);
+
+        fastermessage_send_email('awa@exemple.com', 'Objet', '<p>Corps</p>', ['fallback' => $fallback]);
+        self::assertSame($fallback, $this->lastBody()['fallback']);
+
+        fastermessage_send_sms('+2290160000000', 'Bonjour', ['fallback' => []]);
+        self::assertArrayNotHasKey('fallback', $this->lastBody(), 'un repli vide n’est pas envoyé');
+    }
+
+    public function testLaCaseDuRoutageDesEMailsSEnregistre(): void
+    {
+        $this->configure();
+        self::assertFalse(Settings::isEnabled('route_wp_mail'), 'coupé par défaut');
+        self::assertSame('1', Settings::sanitize(['route_wp_mail' => '1'])['route_wp_mail']);
+        self::assertSame('', Settings::sanitize(['route_wp_mail' => '0'])['route_wp_mail'], 'case décochée : le champ caché envoie 0');
+        FmWp::$options[Settings::OPTION]['route_wp_mail'] = '1';
+        self::assertTrue(Settings::isEnabled('route_wp_mail'));
+        self::assertSame('1', Settings::sanitize([])['route_wp_mail'], 'absent du formulaire : la valeur est gardée');
     }
 
     // ── Envoi WhatsApp ──────────────────────────────────────────────────────
