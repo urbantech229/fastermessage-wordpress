@@ -1,0 +1,6 @@
+# Outillage de développement (PHPUnit) : l'extension n'a AUCUNE dépendance
+# d'exécution — le SDK est embarqué, versionné, dans lib/sdk.
+/vendor/
+/composer.lock
+/.phpunit.result.cache
+/.phpunit.cache/

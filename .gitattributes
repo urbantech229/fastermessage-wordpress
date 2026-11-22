@@ -1,0 +1,12 @@
+# Fichiers de développement exclus de l'archive (`git archive`, archive GitHub) :
+# le zip à installer sur un site ne contient que l'extension.
+/.gitattributes   export-ignore
+/.gitignore       export-ignore
+/.github          export-ignore
+/bin              export-ignore
+/tests            export-ignore
+/composer.json    export-ignore
+/phpunit.xml.dist export-ignore
+/README.md        export-ignore
+
+* text=auto eol=lf

@@ -1,0 +1,19 @@
+{
+    "name": "fastermessage/fastermessage-wordpress",
+    "description": "Extension WordPress officielle FasterMessage : SMS et WhatsApp par l'API v2.",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "homepage": "https://www.fastermessage.com/docs",
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
