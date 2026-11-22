@@ -4,7 +4,7 @@ Tags: sms, whatsapp, notifications, messaging, otp
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 
@@ -17,7 +17,7 @@ FasterMessage is a messaging platform for SMS, WhatsApp and email. This plugin c
 * **Settings**: your API credentials, your API domain (if your provider gave you one), a default SMS sender, WhatsApp number and email sender address. A "Test the connection" button checks everything by reading your balance.
 * **Send from the admin screen**: an SMS, a WhatsApp message (approved template, or free text within the 24-hour window) or an email (written on screen, or a published template), and the list of your latest messages on all three channels with their status. WhatsApp numbers and templates, email addresses and templates are offered as lists: only what your account can actually use.
 * **Send from your code**: `fastermessage_send_sms()`, `fastermessage_send_whatsapp()` and `fastermessage_send_email()` return the message, or a `WP_Error` — never an exception. A `fallback` argument lets the API try another channel if the message fails (for example an SMS when a WhatsApp message cannot be delivered).
-* **Site emails through FasterMessage** (optional, off by default): the emails your site sends with `wp_mail()` go out through FasterMessage. Emails with attachments, Cc, Bcc or Reply-To, and any email FasterMessage refuses, keep going out through the normal sending: a password reset is never blocked.
+* **Site emails through FasterMessage** (optional, off by default): the emails your site sends with `wp_mail()` go out through FasterMessage. Emails with attachments, Cc or Bcc, and any email FasterMessage refuses, keep going out through the normal sending: a password reset is never blocked.
 
 A `fm_test_` key simulates every message: nothing is sent or charged. Use it to try the plugin.
 
@@ -52,7 +52,7 @@ The error code is the stable API code (`insufficient_balance`, `invalid_phone_nu
 
 = How do I send an email? =
 
-`fastermessage_send_email('awa@example.com', 'Your order 1187', '<p>Hello Awa…</p>', ['text' => 'Hello Awa…']);`
+`fastermessage_send_email('awa@example.com', 'Your order 1187', '<p>Hello Awa…</p>', ['text' => 'Hello Awa…', 'reply_to' => 'support@example.com']);`
 
 The sender is a validated address of your account (`from`, or the default from the settings). Without one, the API uses the first active address of your account.
 
@@ -60,7 +60,8 @@ The sender is a validated address of your account (`from`, or the default from t
 
 Yes, with the "Send the site emails through FasterMessage" option (Settings › FasterMessage, off by default). Every email sent with `wp_mail()` then goes out through FasterMessage, from your default email sender, except:
 
-* emails with attachments, Cc or Bcc recipients, or a Reply-To address (contact forms): the API does not support them;
+* emails with attachments, or Cc or Bcc recipients: the API does not support them;
+* emails whose Reply-To holds several addresses or an unreadable one. A single Reply-To address (WooCommerce emails, contact forms) is kept: replies go to it;
 * any email FasterMessage refuses (API unreachable, sender not validated, insufficient balance…): WordPress sends it normally, so nothing is lost.
 
 With several recipients, one email is sent per recipient. If the first one fails, WordPress sends the whole email normally. If a later one fails, the email is not resent (the first recipients already received it): the failure is reported by the `wp_mail_failed` action. The `fastermessage_route_wp_mail` filter keeps a given email on the normal sending.
@@ -79,6 +80,10 @@ With several recipients, one email is sent per recipient. If the first one fails
 * `fastermessage_timeout`, `fastermessage_max_retries` (filters): HTTP timeout (15 s) and retries (1).
 
 == Changelog ==
+
+= 0.3.0 =
+* Fix: emails with a Reply-To address (every WooCommerce email, contact forms) now go out through FasterMessage when "Send the site emails through FasterMessage" is on, with their Reply-To kept. They used to always fall back to the normal sending.
+* New: `reply_to` argument for `fastermessage_send_email()`.
 
 = 0.2.0 =
 * New: optional "Send the site emails through FasterMessage" setting, with automatic fallback to the normal sending.

@@ -123,7 +123,7 @@ final class PluginTest extends TestCase
         self::assertSame('Basic ' . base64_encode('boutique:s3cret'), $request['args']['headers']['Authorization']);
         self::assertSame('fm_live_abc123', $request['args']['headers']['X-Api-Key']);
         self::assertStringStartsWith('sdk-', $request['args']['headers']['Idempotency-Key']);
-        self::assertSame('fastermessage-wordpress/0.2.0', $request['args']['user-agent']);
+        self::assertSame('fastermessage-wordpress/0.3.0', $request['args']['user-agent']);
         self::assertArrayNotHasKey('User-Agent', $request['args']['headers']);
         self::assertTrue($request['args']['sslverify']);
         self::assertSame(0, $request['args']['redirection']);

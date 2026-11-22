@@ -19,9 +19,10 @@ namespace FasterMessageWP;
  * Partent TOUJOURS par l'envoi normal (`null`), sans appel à l'API :
  *  · réglage coupé, ou extension non configurée ;
  *  · pièces jointes (l'API n'en prend pas) ;
- *  · en-têtes `Cc`, `Bcc` (l'API n'en prend pas) ou `Reply-To` (les formulaires de
- *    contact s'en servent pour répondre au visiteur : l'ignorer enverrait la
- *    réponse au site) ;
+ *  · en-têtes `Cc` ou `Bcc` (l'API n'en prend pas) ;
+ *  · un `Reply-To` à plusieurs adresses, illisible, ou répété. UNE adresse, elle,
+ *    part dans `content.reply_to` (0.3.0) : WooCommerce en met une sur TOUS ses
+ *    e-mails, et les formulaires de contact s'en servent pour répondre au visiteur ;
  *  · corps `multipart/*` déjà construit par une extension ;
  *  · un destinataire illisible ;
  *  · un e-mail écarté par le filtre `fastermessage_route_wp_mail`.
@@ -94,7 +95,7 @@ final class MailRouter
      *
      * @param array<string, mixed> $atts
      *
-     * @return null|array{to: list<string>, subject: string, html: string, text: string}
+     * @return null|array{to: list<string>, subject: string, html: string, text: string, reply_to: string}
      */
     public static function prepare(array $atts): ?array
     {
@@ -103,18 +104,39 @@ final class MailRouter
         }
 
         $contentType = null;
+        $replyToHeader = null;
         foreach (self::headerLines($atts['headers'] ?? []) as $line) {
             $parts = explode(':', $line, 2);
             if (count($parts) !== 2) {
                 continue;
             }
             $name = strtolower(trim($parts[0]));
-            if (in_array($name, ['cc', 'bcc', 'reply-to'], true)) {
+            if (in_array($name, ['cc', 'bcc'], true)) {
                 return null;
+            }
+            if ($name === 'reply-to') {
+                // Deux en-têtes `Reply-To` : on ne choisit pas lequel compte.
+                if ($replyToHeader !== null) {
+                    return null;
+                }
+                $replyToHeader = $parts[1];
             }
             if ($name === 'content-type') {
                 $contentType = strtolower(trim(explode(';', $parts[1], 2)[0]));
             }
+        }
+
+        // `Reply-To` : UNE adresse, transmise à l'API (`content.reply_to`). Plusieurs
+        // adresses, ou une adresse illisible → envoi normal : perdre la réponse au
+        // visiteur (formulaire de contact) ou au client (alerte de commande) serait
+        // pire que de ne pas passer par FasterMessage.
+        $replyTo = '';
+        if ($replyToHeader !== null) {
+            $parsed = self::recipients($replyToHeader);
+            if ($parsed === null || count($parsed) !== 1) {
+                return null;
+            }
+            $replyTo = $parsed[0];
         }
 
         // Même ordre que `wp_mail()` : l'en-tête d'abord, puis le filtre global.
@@ -131,12 +153,12 @@ final class MailRouter
         $subject = is_scalar($atts['subject'] ?? null) ? (string) $atts['subject'] : '';
         $message = is_scalar($atts['message'] ?? null) ? (string) $atts['message'] : '';
         if ($contentType === 'text/html') {
-            return ['to' => $recipients, 'subject' => $subject, 'html' => $message, 'text' => ''];
+            return ['to' => $recipients, 'subject' => $subject, 'html' => $message, 'text' => '', 'reply_to' => $replyTo];
         }
 
         // Texte brut : gardé tel quel en version texte, et mis en forme HTML sans
         // rien interpréter (un « <lien> » de réinitialisation reste lisible).
-        return ['to' => $recipients, 'subject' => $subject, 'html' => wpautop(esc_html($message)), 'text' => $message];
+        return ['to' => $recipients, 'subject' => $subject, 'html' => wpautop(esc_html($message)), 'text' => $message, 'reply_to' => $replyTo];
     }
 
     /**
@@ -173,8 +195,8 @@ final class MailRouter
     }
 
     /**
-     * @param array{to: list<string>, subject: string, html: string, text: string} $mail
-     * @param array<string, mixed>                                                 $atts
+     * @param array{to: list<string>, subject: string, html: string, text: string, reply_to: string} $mail
+     * @param array<string, mixed>                                                                   $atts
      *
      * @return null|true
      */
@@ -183,7 +205,7 @@ final class MailRouter
         $sent = [];
         $failed = [];
         foreach ($mail['to'] as $address) {
-            $result = Messaging::sendEmail($address, $mail['subject'], $mail['html'], ['text' => $mail['text']]);
+            $result = Messaging::sendEmail($address, $mail['subject'], $mail['html'], ['text' => $mail['text'], 'reply_to' => $mail['reply_to']]);
             if (!is_wp_error($result)) {
                 $sent[] = $address;
                 continue;

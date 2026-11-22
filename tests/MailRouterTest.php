@@ -105,14 +105,50 @@ final class MailRouterTest extends TestCase
         self::assertSame([], FmWp::$requests);
     }
 
-    public function testCcBccEtReplyToLaissentLEnvoiNormal(): void
+    public function testCcEtBccLaissentLEnvoiNormal(): void
     {
         $this->enable();
 
         self::assertNull(MailRouter::filter(null, $this->mail(['headers' => "From: Site <site@x.com>\r\nCc: chef@exemple.com"])));
         self::assertNull(MailRouter::filter(null, $this->mail(['headers' => ['BCC: archive@exemple.com']])));
-        self::assertNull(MailRouter::filter(null, $this->mail(['headers' => ['Reply-To' => 'visiteur@exemple.com']])));
         self::assertSame([], FmWp::$requests);
+    }
+
+    public function testUnReplyToAmbiguLaisseLEnvoiNormal(): void
+    {
+        $this->enable();
+
+        // Plusieurs adresses, une adresse illisible, ou deux en-têtes : la réponse se perdrait.
+        self::assertNull(MailRouter::filter(null, $this->mail(['headers' => ['Reply-To: a@exemple.com, b@exemple.com']])));
+        self::assertNull(MailRouter::filter(null, $this->mail(['headers' => ['Reply-To: pas une adresse']])));
+        self::assertNull(MailRouter::filter(null, $this->mail(['headers' => ['Reply-To: a@exemple.com', 'Reply-To: b@exemple.com']])));
+        self::assertSame([], FmWp::$requests);
+    }
+
+    public function testUnReplyToEstTransmisALApi(): void
+    {
+        $this->enable();
+        $this->respondInSequence([201, 201]);
+
+        // Forme simple (formulaire de contact), puis la forme de WooCommerce.
+        self::assertTrue(MailRouter::filter(null, $this->mail(['headers' => ['Reply-To' => 'visiteur@exemple.com']])));
+        self::assertTrue(MailRouter::filter(null, $this->mail([
+            'message' => '<p>Nouvelle commande</p>',
+            'headers' => "Content-Type: text/html\r\nReply-to: Awa Client <awa.client@exemple.com>\r\n",
+        ])));
+
+        self::assertSame('visiteur@exemple.com', $this->bodies()[0]['content']['reply_to']);
+        self::assertSame('awa.client@exemple.com', $this->bodies()[1]['content']['reply_to']);
+    }
+
+    public function testSansReplyToLeContenuNEnPortePas(): void
+    {
+        $this->enable();
+        $this->respondInSequence([201]);
+
+        MailRouter::filter(null, $this->mail());
+
+        self::assertArrayNotHasKey('reply_to', $this->bodies()[0]['content']);
     }
 
     public function testUnCorpsMultipartLaisseLEnvoiNormal(): void

@@ -97,7 +97,9 @@ Branché sur le filtre `pre_wp_mail` (WordPress 5.7+). **Le repli est la règle*
 
 | Cas | Ce qui se passe |
 |---|---|
-| Pièces jointes, en-têtes `Cc` / `Bcc` / `Reply-To`, corps `multipart/*`, destinataire illisible | Envoi normal, sans appel à l'API |
+| Pièces jointes, en-têtes `Cc` / `Bcc`, corps `multipart/*`, destinataire illisible | Envoi normal, sans appel à l'API |
+| `Reply-To` à une adresse (`adresse` ou `Nom <adresse>`) — tous les e-mails WooCommerce, les formulaires de contact | Transmis à l'API (`content.reply_to`) : les réponses y arrivent |
+| `Reply-To` à plusieurs adresses, illisible ou répété | Envoi normal, sans appel à l'API |
 | Refus de l'API, panne réseau | Envoi normal |
 | `Content-Type: text/html` (en-tête ou filtre `wp_mail_content_type`) | Corps envoyé tel quel en HTML |
 | Texte brut | Version texte telle quelle + version HTML échappée (`wpautop(esc_html())`) |

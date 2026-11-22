@@ -111,9 +111,12 @@ final class Messaging
      * `from` : une adresse VALIDÉE du compte ; absente (ni argument ni réglage),
      * l'API prend la première adresse active du compte.
      *
+     * `reply_to` : l'adresse qui recevra les réponses (une adresse seule, sans nom
+     * affiché) ; elle n'a pas à être une adresse validée du compte.
+     *
      * Ni pièce jointe, ni copie (Cc/Bcc), ni nom d'expéditeur : l'API ne les prend pas.
      *
-     * @param array{from?: string, text?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
+     * @param array{from?: string, text?: string, reply_to?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *
      * @return array<string, mixed>|\WP_Error
      */
@@ -124,6 +127,7 @@ final class Messaging
             'subject' => $subject,
             'html' => $html,
             'text' => (string) ($args['text'] ?? ''),
+            'reply_to' => trim((string) ($args['reply_to'] ?? '')),
         ], static fn (string $value) => $value !== '');
 
         return self::send('email', $params, $args['idempotency_key'] ?? null);

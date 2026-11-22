@@ -73,9 +73,10 @@ if (!function_exists('fastermessage_send_email')) {
      *     fastermessage_send_email('awa@exemple.com', 'Votre commande 1187', '<p>Bonjour Awa…</p>', [
      *         'text' => 'Bonjour Awa…',            // version texte, facultative
      *         'from' => 'commandes@maboutique.com', // adresse validée ; défaut : réglages, puis compte
+     *         'reply_to' => 'support@maboutique.com', // adresse de réponse, facultative
      *     ]);
      *
-     * @param array{from?: string, text?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
+     * @param array{from?: string, text?: string, reply_to?: string, client_reference?: string, callback_url?: string, idempotency_key?: string, fallback?: list<array<string, mixed>>} $args
      *
      * @return array<string, mixed>|WP_Error
      */
